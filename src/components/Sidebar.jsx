@@ -21,7 +21,7 @@ function Avatar({ name, size = 26 }) {
   )
 }
 
-export default function Sidebar({ channels, activeChannel, onSelectChannel, profile, onSignOut, onlineUsers, onCreateChannel }) {
+export default function Sidebar({ channels, activeChannel, onSelectChannel, profile, onSignOut, onlineUsers, onCreateChannel, onDeleteChannel }) {
   const [showNewChannel, setShowNewChannel] = useState(false)
   const [newName, setNewName] = useState('')
   const [newDesc, setNewDesc] = useState('')
@@ -137,6 +137,7 @@ export default function Sidebar({ channels, activeChannel, onSelectChannel, prof
           <div
             key={ch.id}
             onClick={() => onSelectChannel(ch)}
+            className="channel-item"
             style={{
               display: 'flex', alignItems: 'center', gap: '7px',
               padding: '7px 10px', borderRadius: '7px', cursor: 'pointer',
@@ -145,14 +146,46 @@ export default function Sidebar({ channels, activeChannel, onSelectChannel, prof
               color: activeChannel?.id === ch.id ? 'var(--text)' : 'var(--muted)',
               fontWeight: activeChannel?.id === ch.id ? '500' : '400',
               transition: 'background 0.1s',
+              position: 'relative',
+              group: 'true' // For hover control
             }}
-            onMouseEnter={e => { if (activeChannel?.id !== ch.id) e.currentTarget.style.background = 'var(--hover)' }}
-            onMouseLeave={e => { if (activeChannel?.id !== ch.id) e.currentTarget.style.background = 'transparent' }}
+            onMouseEnter={e => { 
+                if (activeChannel?.id !== ch.id) e.currentTarget.style.background = 'var(--hover)'
+                const btn = e.currentTarget.querySelector('.delete-btn')
+                if (btn) btn.style.opacity = '1'
+            }}
+            onMouseLeave={e => { 
+                if (activeChannel?.id !== ch.id) e.currentTarget.style.background = 'transparent'
+                const btn = e.currentTarget.querySelector('.delete-btn')
+                if (btn) btn.style.opacity = '0'
+            }}
           >
             <span style={{ fontSize: '15px', color: 'var(--muted)', lineHeight: 1 }}>#</span>
             <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {ch.name}
             </span>
+            
+            {/* 只有建立者可以刪除，或者根據 RLS 政策由後端擋下 */}
+            {ch.created_by === profile?.id && (
+              <button
+                className="delete-btn"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  if (confirm(`確定要刪除 #${ch.name} 頻道嗎？這將會刪除所有訊息。`)) {
+                    onDeleteChannel(ch.id)
+                  }
+                }}
+                style={{
+                  border: 'none', background: 'transparent', cursor: 'pointer',
+                  color: '#ef4444', fontSize: '14px', padding: '2px 4px',
+                  opacity: 0, transition: 'opacity 0.1s', display: 'flex',
+                  alignItems: 'center', justifyContent: 'center'
+                }}
+                title="刪除頻道"
+              >
+                🗑️
+              </button>
+            )}
           </div>
         ))}
       </div>

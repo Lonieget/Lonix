@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Sidebar from '../components/Sidebar'
 import MessageItem from '../components/MessageItem'
 import MessageInput from '../components/MessageInput'
@@ -45,17 +45,36 @@ function groupMessages(messages) {
 }
 
 export default function ChatPage({ user, profile, onSignOut }) {
-  const { channels, loading: loadingChannels, createChannel } = useChannels()
+  const { channels, loading: loadingChannels, createChannel, deleteChannel } = useChannels()
   const [activeChannel, setActiveChannel] = useState(null)
   const { messages, loading: loadingMessages, sendMessage, bottomRef } = useMessages(activeChannel?.id)
   const onlineUsers = useOnlineUsers(user, profile)
 
-  // Auto-select first channel
-  if (!activeChannel && channels.length > 0) {
-    setActiveChannel(channels[0])
-  }
+  // Auto-select first channel or fallback if active deleted
+  useEffect(() => {
+    if (channels.length > 0) {
+      if (!activeChannel) {
+        setActiveChannel(channels[0])
+      } else {
+        // 檢查當前活動頻道是否還在 channels 中
+        const exists = channels.find(ch => ch.id === activeChannel.id)
+        if (!exists) {
+          setActiveChannel(channels[0])
+        }
+      }
+    } else {
+      setActiveChannel(null)
+    }
+  }, [channels, activeChannel])
 
   const grouped = groupMessages(messages)
+
+  async function handleDeleteChannel(id) {
+    const { error } = await deleteChannel(id)
+    if (error) {
+      alert('刪除頻道失敗: ' + error.message)
+    }
+  }
 
   return (
     <div style={{
@@ -72,6 +91,7 @@ export default function ChatPage({ user, profile, onSignOut }) {
         onSignOut={onSignOut}
         onlineUsers={onlineUsers}
         onCreateChannel={(name, desc) => createChannel(name, desc, user.id)}
+        onDeleteChannel={handleDeleteChannel}
       />
 
       {/* Main chat area */}

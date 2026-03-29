@@ -52,6 +52,7 @@ CREATE POLICY "profiles_update" ON profiles FOR UPDATE TO authenticated USING (a
 -- Channels: 所有登入使用者可讀
 CREATE POLICY "channels_select" ON channels FOR SELECT TO authenticated USING (true);
 CREATE POLICY "channels_insert" ON channels FOR INSERT TO authenticated WITH CHECK (auth.uid() = created_by);
+CREATE POLICY "channels_delete" ON channels FOR DELETE TO authenticated USING (auth.uid() = created_by);
 
 -- Messages: 所有登入使用者可讀寫，只能刪自己的
 CREATE POLICY "messages_select" ON messages FOR SELECT TO authenticated USING (true);
@@ -82,6 +83,7 @@ CREATE TRIGGER on_auth_user_created
 -- 啟用 Realtime
 -- ============================================
 -- 在 Supabase Dashboard > Database > Replication
--- 將 messages 和 profiles 表加入 realtime publication
+-- 將 messages, profiles 和 channels 表加入 realtime publication
 ALTER PUBLICATION supabase_realtime ADD TABLE messages;
 ALTER PUBLICATION supabase_realtime ADD TABLE profiles;
+ALTER PUBLICATION supabase_realtime ADD TABLE channels;

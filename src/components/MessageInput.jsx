@@ -1,11 +1,14 @@
 import { useState, useRef } from 'react'
+import { supabase } from '../lib/supabase'
 
 const EMOJIS = ['😊','👍','🎉','❤️','🙌','🔥','💡','✅','😂','🤔','👀','🚀','📌','💬','🛠️','📅','😅','🥳','👏','💪','🎯','✨','🙏','😎']
 
 export default function MessageInput({ onSend, channelName, disabled }) {
   const [text, setText] = useState('')
   const [showEmoji, setShowEmoji] = useState(false)
+  const [uploading, setUploading] = useState(false)
   const textareaRef = useRef(null)
+  const fileInputRef = useRef(null)
 
   function handleKeyDown(e) {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -15,11 +18,49 @@ export default function MessageInput({ onSend, channelName, disabled }) {
   }
 
   function handleSend() {
-    if (!text.trim() || disabled) return
+    if ((!text.trim() && !uploading) || disabled) return
     onSend(text)
     setText('')
     setShowEmoji(false)
     textareaRef.current?.focus()
+  }
+
+  async function handleFileUpload(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // 限制大小 5MB
+    const MAX_SIZE = 5 * 1024 * 1024
+    if (file.size > MAX_SIZE) {
+      alert('檔案太大了！請上傳 5MB 以內的檔案。')
+      return
+    }
+
+    setUploading(true)
+    const fileExt = file.name.split('.').pop()
+    const fileName = `${Math.random().toString(36).slice(2)}_${Date.now()}.${fileExt}`
+    const filePath = `${fileName}`
+
+    try {
+      const { error: uploadError } = await supabase.storage
+        .from('chat-files')
+        .upload(filePath, file)
+
+      if (uploadError) throw uploadError
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('chat-files')
+        .getPublicUrl(filePath)
+
+      // 直接送出包含檔案的訊息
+      onSend('', publicUrl, file.type)
+    } catch (error) {
+      console.error('上傳失敗:', error)
+      alert(`檔案上傳失敗：${error.message || '未知錯誤'} (請確認 chat-files Bucket 是否已建立且權限已設定)`)
+    } finally {
+      setUploading(false)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    }
   }
 
   function insertEmoji(emoji) {
@@ -49,6 +90,13 @@ export default function MessageInput({ onSend, channelName, disabled }) {
 
   return (
     <div style={{ padding: '12px 16px', borderTop: '1px solid var(--border)', position: 'relative' }}>
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleFileUpload}
+        style={{ display: 'none' }}
+      />
+
       {/* Emoji picker */}
       {showEmoji && (
         <div style={{
@@ -84,9 +132,7 @@ export default function MessageInput({ onSend, channelName, disabled }) {
         background: 'var(--surface)',
         overflow: 'hidden',
         transition: 'border-color 0.15s',
-      }}
-        onFocus={() => {}}
-      >
+      }}>
         {/* Toolbar */}
         <div style={{
           display: 'flex', alignItems: 'center', gap: '2px',
@@ -133,6 +179,18 @@ export default function MessageInput({ onSend, channelName, disabled }) {
             onMouseLeave={e => { e.target.style.background = 'transparent'; e.target.style.color = 'var(--muted)' }}
           >{'{ }'}</button>
           <div style={{ width: 1, height: 14, background: 'var(--border)', margin: '0 2px' }} />
+          <button
+            title="上傳檔案"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+            style={{
+              width: 26, height: 26, border: 'none', background: 'transparent',
+              borderRadius: '4px', cursor: 'pointer', fontSize: 14,
+              display: 'flex', alignItems: 'center', justifyContent: 'center'
+            }}
+            onMouseEnter={e => { e.target.style.background = 'var(--hover)' }}
+            onMouseLeave={e => { e.target.style.background = 'transparent' }}
+          >{uploading ? '⏳' : '📎'}</button>
           <button
             title="表情符號"
             onClick={() => setShowEmoji(s => !s)}

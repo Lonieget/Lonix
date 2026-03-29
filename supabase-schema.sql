@@ -25,9 +25,13 @@ CREATE TABLE messages (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   channel_id UUID REFERENCES channels(id) ON DELETE CASCADE NOT NULL,
   user_id UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
-  content TEXT NOT NULL,
+  content TEXT, -- 允許 content 為空（例如只上傳圖片）
+  file_url TEXT, -- 檔案或圖片的公開網址
+  file_type TEXT, -- 檔案類型 (例如 image/png, application/pdf)
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- 注意：上傳檔案限制設為 5MB
 
 -- 4. 預設頻道
 INSERT INTO channels (name, description) VALUES
@@ -87,3 +91,26 @@ CREATE TRIGGER on_auth_user_created
 ALTER PUBLICATION supabase_realtime ADD TABLE messages;
 ALTER PUBLICATION supabase_realtime ADD TABLE profiles;
 ALTER PUBLICATION supabase_realtime ADD TABLE channels;
+
+-- ============================================
+-- 5. Storage 設定 (請在 Supabase Dashboard 建立 'chat-files' Bucket)
+-- ============================================
+
+-- 允許所有已登入使用者將檔案上傳到 chat-files bucket
+-- 並限制大小在 5MB 以內 (5242880 bytes)
+-- 注意：Bucket 必須先手動建立
+-- INSERT INTO storage.buckets (id, name, public) VALUES ('chat-files', 'chat-files', true);
+
+CREATE POLICY "Allow Authenticated Upload"
+ON storage.objects FOR INSERT
+TO authenticated
+WITH CHECK (
+  bucket_id = 'chat-files' AND
+  (storage.extension(name) = ANY (ARRAY['jpg', 'jpeg', 'png', 'gif', 'pdf', 'txt', 'zip', 'docx'])) AND
+  (octet_length(content) <= 5242880)
+);
+
+CREATE POLICY "Allow Public Select"
+ON storage.objects FOR SELECT
+TO public
+USING (bucket_id = 'chat-files');

@@ -150,7 +150,7 @@ export default function ChatPage({ user, profile, onSignOut }) {
             {/* Input */}
             <MessageInput
               channelName={activeChannel.name}
-              onSend={(content) => sendMessage(content, user.id)}
+              onSend={(content, fileUrl, fileType) => sendMessage(content, user.id, fileUrl, fileType)}
               disabled={loadingMessages}
             />
           </>

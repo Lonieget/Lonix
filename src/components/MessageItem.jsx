@@ -129,6 +129,51 @@ export default function MessageItem({ message, isMine, showHeader }) {
           >
             {message.content}
           </ReactMarkdown>
+
+          {message.file_url && (
+            <div style={{ marginTop: '8px' }}>
+              {message.file_type?.startsWith('image/') ? (
+                <a href={message.file_url} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-block' }}>
+                  <img
+                    src={message.file_url}
+                    alt="上傳圖片"
+                    style={{
+                      maxWidth: '100%',
+                      maxHeight: '300px',
+                      borderRadius: '8px',
+                      border: '1px solid var(--border)',
+                      cursor: 'zoom-in'
+                    }}
+                  />
+                </a>
+              ) : (
+                <a
+                  href={message.file_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '10px 14px',
+                    background: 'var(--surface)',
+                    border: '1px solid var(--border)',
+                    borderRadius: '10px',
+                    textDecoration: 'none',
+                    color: 'var(--text)',
+                    fontSize: '13px',
+                    width: 'fit-content'
+                  }}
+                >
+                  <span style={{ fontSize: '18px' }}>📄</span>
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <span style={{ fontWeight: '500' }}>點擊下載檔案</span>
+                    <span style={{ fontSize: '11px', color: 'var(--muted)' }}>{message.file_type || '未知格式'}</span>
+                  </div>
+                </a>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>

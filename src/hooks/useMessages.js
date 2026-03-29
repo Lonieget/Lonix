@@ -91,12 +91,19 @@ export function useMessages(channelId) {
     }
   }, [channelId])
 
-  async function sendMessage(content, userId) {
-    if (!content.trim() || !channelId) return
+  async function sendMessage(content, userId, fileUrl = null, fileType = null) {
+    if (!content?.trim() && !fileUrl) return
+    if (!channelId) return
 
     const { error } = await supabase
       .from('messages')
-      .insert({ channel_id: channelId, user_id: userId, content: content.trim() })
+      .insert({
+        channel_id: channelId,
+        user_id: userId,
+        content: content?.trim() || null,
+        file_url: fileUrl,
+        file_type: fileType
+      })
 
     if (error) console.error('送出訊息失敗:', error)
   }
